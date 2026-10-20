@@ -96,6 +96,9 @@ script falls back to calling `BaseSearchResource` itself (once per query).
   `PinResource` — but it will not know anything the DOM does not show.
 - Logged-in results are personalised, so positions here can differ from another
   account's view and from the CLI's logged-out scrape.
+- Counts are Pinterest's own numbers. A pin whose tile hides the count can still
+  report `saves: 1` in Pinterest's data (the initial save); the overlay shows
+  that value rather than guessing at a zero.
 
 ## Relationship to the CLI
 

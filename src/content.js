@@ -152,6 +152,10 @@
       })
       .then((body) => {
         const payload = body && body.resource_response && body.resource_response.data;
+        // Pinterest can redirect a merged pin; never paint another pin's counts.
+        if (payload && payload.id && String(payload.id) !== String(id)) {
+          throw new Error("pin redirected");
+        }
         return { status: "ok", data: X.slimDetail(payload), at: Date.now() };
       })
       .catch((err) => ({
@@ -307,6 +311,15 @@
       anchor.appendChild(badge);
     }
 
+    // A virtualised grid can hand this anchor to a different pin. Never leave
+    // the previous pin's label behind: it would show the wrong counts.
+    for (const other of anchor.querySelectorAll(":scope > .pinrank-badge")) {
+      if (other === badge) continue;
+      other.remove();
+      const otherId = other.getAttribute("data-pin");
+      if (badgeById.get(otherId) === other) badgeById.delete(otherId);
+    }
+
     const detail = details.get(info.id);
     const comments = detail && detail.status === "ok" ? detail.data.comments : info.comments;
 
@@ -384,9 +397,19 @@
       if (best.near) maybeFetchStats(id);
     }
 
-    // Drop any badge that is no longer the chosen one for its pin.
+    // Drop badges that no longer sit on the anchor for their own pin — the grid
+    // recycles cards, so a badge can outlive the pin it was drawn for.
     for (const node of document.querySelectorAll(".pinrank-badge")) {
-      if (badgeById.get(node.getAttribute("data-pin")) !== node) node.remove();
+      const id = node.getAttribute("data-pin");
+      const holder = node.parentElement;
+      const href = holder && holder.getAttribute ? holder.getAttribute("href") : "";
+      const holderId = href ? pinIdFromHref(href) : "";
+      const tracked = badgeById.get(id);
+
+      if (tracked === node && holderId === id) continue;
+
+      node.remove();
+      if (tracked === node) badgeById.delete(id);
     }
   }
 
