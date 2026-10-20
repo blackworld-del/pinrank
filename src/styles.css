@@ -14,8 +14,8 @@
  * One palette for both surfaces: white paper, black text, and colour only where
  * a number needs to be told apart from its neighbours.
  *
- *   saves    pine green    #1f6f5c
- *   comments burnt orange  #c2410c
+ *   saves    burnt orange  #c2410c
+ *   comments ink           #141414
  *   repins   slate         #5a6b7b
  *   age      walnut        #8a6a4f
  */
@@ -59,11 +59,11 @@
 }
 
 .pinrank-badge .pinrank-save {
-  color: #141414;
+  color: #c2410c;
 }
 
 .pinrank-badge .pinrank-comment {
-  color: #c2410c;
+  color: #141414;
 }
 
 .pinrank-badge .pinrank-age {
@@ -162,11 +162,11 @@
 }
 
 .pinrank-stat.pinrank-saves b {
-  color: #1f6f5c;
+  color: #c2410c;
 }
 
 .pinrank-stat.pinrank-comments b {
-  color: #c2410c;
+  color: #141414;
 }
 
 .pinrank-stat.pinrank-repins b {

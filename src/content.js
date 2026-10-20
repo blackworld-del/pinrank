@@ -23,7 +23,7 @@
   window.__pinRankContent = true;
 
   /** Bump with manifest.json; the hover panel prints it so a reload is provable. */
-  const VERSION = "0.1.3";
+  const VERSION = "0.1.4";
 
   const DETAIL_TTL_MS = 10 * 60 * 1000;
   const ERROR_TTL_MS = 60 * 1000;
