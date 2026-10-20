@@ -24,15 +24,15 @@
   row-gap: 2px;
   max-width: calc(100% - 16px);
   padding: 4px 9px;
-  border-radius: 10px;
-  background: rgba(17, 17, 19, 0.84);
-  color: #fff;
+  border-radius: 8px;
+  background: rgba(28, 26, 22, 0.86);
+  color: #fbfaf7;
   font-size: 11px;
   font-weight: 600;
   line-height: 1.25;
   letter-spacing: 0.01em;
   pointer-events: none;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 1px 4px rgba(20, 18, 15, 0.3);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
@@ -45,160 +45,191 @@
 
 .pinrank-badge .pinrank-rank {
   padding-right: 8px;
-  border-right: 1px solid rgba(255, 255, 255, 0.22);
-  color: #ffd166;
+  border-right: 1px solid rgba(251, 250, 247, 0.22);
+  color: #f3c77b;
 }
 
 .pinrank-badge .pinrank-save {
-  color: #fff;
+  color: #ffffff;
 }
 
 .pinrank-badge .pinrank-comment {
-  color: #8fe3c0;
+  color: #ffa45b;
 }
 
 .pinrank-badge .pinrank-age {
-  color: #c9c9d1;
+  color: #cfc9bf;
 }
 
 /* ------------------------------------------------------------------- panel */
 
 .pinrank-panel {
+  /* Warm paper and a single accent. Nothing here should look like a dashboard. */
+  --ink: #201e1b;
+  --muted: #7a746a;
+  --faint: #a39c90;
+  --hair: rgba(32, 30, 27, 0.11);
+  --paper: #faf9f6;
+  --accent: #c2410c;
+
   position: fixed;
   z-index: 2147483000;
-  width: 320px;
+  width: 318px;
   max-height: 76vh;
   overflow: hidden;
-  padding: 12px 13px 11px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(18, 18, 21, 0.97);
-  color: #f4f4f5;
+  padding: 14px 15px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(32, 30, 27, 0.14);
+  background: var(--paper);
+  color: var(--ink);
   font-size: 12px;
   line-height: 1.45;
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 10px 28px rgba(25, 22, 18, 0.16);
   pointer-events: none;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 .pinrank-head {
   display: flex;
   align-items: baseline;
-  gap: 7px;
-  margin-bottom: 9px;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .pinrank-pos {
   flex: 0 0 auto;
-  padding: 1px 6px;
-  border-radius: 5px;
-  background: rgba(255, 209, 102, 0.14);
-  color: #ffd166;
-  font-size: 11px;
-  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 10.5px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
 .pinrank-title {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.35;
+  color: var(--ink);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
+/* Numbers first, labels underneath, hairline between them: no card-in-card. */
 .pinrank-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  margin-bottom: 10px;
+  display: flex;
+  align-items: stretch;
+  margin: 0 0 12px;
+  padding: 9px 0 10px;
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
 }
 
 .pinrank-stat {
-  padding: 6px 8px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.055);
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 11px;
+}
+
+.pinrank-stat:first-child {
+  padding-left: 0;
+}
+
+.pinrank-stat + .pinrank-stat {
+  border-left: 1px solid var(--hair);
 }
 
 .pinrank-stat b {
   display: block;
-  font-size: 14px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
   line-height: 1.15;
+  font-variant-numeric: tabular-nums;
 }
 
 .pinrank-stat span {
   display: block;
-  font-size: 10px;
-  color: rgba(244, 244, 245, 0.58);
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  letter-spacing: 0.045em;
+  color: var(--muted);
 }
 
-.pinrank-stat.pinrank-saves b {
-  color: #ff8fa3;
-}
 .pinrank-stat.pinrank-comments b {
-  color: #8fe3c0;
+  color: var(--accent);
 }
+
 .pinrank-stat.pinrank-repins b {
-  color: #9ecbff;
+  color: var(--muted);
 }
 
 .pinrank-rows {
   display: grid;
-  grid-template-columns: 84px 1fr;
-  gap: 3px 9px;
+  grid-template-columns: 80px 1fr;
+  gap: 4px 12px;
   margin: 0;
-  padding-top: 9px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .pinrank-rows dt {
-  color: rgba(244, 244, 245, 0.52);
+  color: var(--muted);
   font-size: 10.5px;
   padding-top: 1px;
 }
 
 .pinrank-rows dd {
   margin: 0;
-  font-size: 11.5px;
+  font-size: 12px;
+  color: var(--ink);
   overflow-wrap: anywhere;
 }
 
 .pinrank-note {
-  margin-top: 9px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(244, 244, 245, 0.55);
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--hair);
+  color: var(--muted);
   font-size: 10.5px;
 }
 
 .pinrank-foot {
-  margin-top: 8px;
-  color: rgba(244, 244, 245, 0.3);
-  font-size: 9.5px;
-  letter-spacing: 0.055em;
+  margin-top: 9px;
+  color: var(--faint);
+  font-size: 9px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+/* Same paper, turned down for people browsing Pinterest in dark mode. */
+@media (prefers-color-scheme: dark) {
+  .pinrank-panel {
+    --ink: #ece9e2;
+    --muted: #a29b90;
+    --faint: #7b756b;
+    --hair: rgba(236, 233, 226, 0.14);
+    --paper: #1c1b18;
+    --accent: #f08a4b;
+
+    border-color: rgba(236, 233, 226, 0.16);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .pinrank-panel {
-    animation: pinrank-in 90ms ease-out;
+    animation: pinrank-in 110ms ease-out;
   }
 }
 
 @keyframes pinrank-in {
   from {
     opacity: 0;
-    transform: translateY(3px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
