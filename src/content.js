@@ -1,13 +1,19 @@
 /**
  * ISOLATED-world content script.
  *
- * Draws a badge on every pin card in the search grid (rank + saves, plus the
- * comment count once it has been fetched) and a detail panel on hover.
+ * Draws a badge on every pin card — search results, profiles, boards, the home
+ * feed — with rank (search only), saves, and the comment count, plus a detail
+ * panel on hover.
  *
- * Save counts arrive free from the intercepted search responses. Comments are
- * not in the search payload at all, so they are fetched from PinResource on
- * hover — one request per pin, cached — rather than blasting 100 requests on
- * page load.
+ * Counts come from two places:
+ *   1. intercepted page responses (free, instant, carries search rank)
+ *   2. PinResource, called with this browser's own session, for pins whose
+ *      payload has no save count (profiles return stripped tiles) or whose
+ *      feed value may be stale
+ *
+ * Because everything is fetched with the page's own cookies, each person using
+ * the extension sees their own Pinterest account. There is no cookie file and
+ * nothing to paste.
  */
 (function () {
   "use strict";
@@ -19,13 +25,29 @@
   const DETAIL_TTL_MS = 10 * 60 * 1000;
   const ERROR_TTL_MS = 60 * 1000;
 
-  /** id -> slimPin from the search payload */
+  /** Requests a page may spend prefetching stats, and how fast they go out. */
+  const PAGE_FETCH_BUDGET = 80;
+  const MAX_INFLIGHT = 2;
+  const REQUEST_GAP_MS = 120;
+
+  /** id -> slimPin from an intercepted payload, or a placeholder from the DOM */
   const pins = new Map();
   /** id -> { status, data|error, at } */
   const details = new Map();
   const pending = new Map();
   /** id -> the single badge element kept for that pin */
   const badgeById = new Map();
+  /** ids whose counts came from PinResource, so they must not be refetched */
+  const authoritative = new Set();
+
+  const fetchQueue = [];
+  let inflight = 0;
+  let pumpTimer = 0;
+  let fetchBudget = PAGE_FETCH_BUDGET;
+  let readyAt = 0;
+  let emptyStats = 0;
+  let statsDisabled = false;
+  let rankedSeen = false;
 
   let panel = null;
   let panelId = "";
@@ -140,13 +162,118 @@
       .then((result) => {
         details.set(id, result);
         pending.delete(id);
+
+        if (result.status === "ok") {
+          const d = result.data;
+          const info = pins.get(id) || blankPin(id);
+          pins.set(id, {
+            ...info,
+            saves: d.saves != null ? d.saves : info.saves,
+            comments: d.comments != null ? d.comments : info.comments,
+            repins: d.repins != null ? d.repins : info.repins,
+          });
+          authoritative.add(id);
+
+          // A missing save count usually means the browser is logged out. Stop
+          // prefetching rather than spending the page budget on it.
+          if (d.saves == null && info.saves == null) {
+            emptyStats += 1;
+            if (emptyStats >= 3) statsDisabled = true;
+          } else {
+            emptyStats = 0;
+          }
+        }
+
         if (panelId === id) renderPanel(id);
-        if (result.status === "ok") queueScan(); // badge now has the comment count
+        if (result.status === "ok") queueScan(); // badge now has the counts
         return result;
       });
 
     pending.set(id, task);
     return task;
+  }
+
+  /** A pin we know exists (from the DOM) but have no payload for yet. */
+  function blankPin(id) {
+    return {
+      id,
+      position: null,
+      saves: null,
+      comments: null,
+      repins: null,
+      title: "",
+      description: "",
+      link: "",
+      domain: "",
+      hasLink: false,
+      pinner: "",
+      pinnerName: "",
+      followers: null,
+      board: "",
+      boardPins: null,
+      createdAt: "",
+      richType: "",
+      richSite: "",
+      width: null,
+      height: null,
+      topics: [],
+      hashtags: [],
+      alt: "",
+      promoted: false,
+    };
+  }
+
+  /**
+   * Prefetch one pin's counts using this browser's own Pinterest session — the
+   * same cookies and csrftoken the page itself uses, so every person sees their
+   * own account with no cookie file to paste.
+   *
+   * Called only for pins near the viewport, and only when the intercepted
+   * payload did not already supply a trustworthy save count.
+   */
+  function maybeFetchStats(id) {
+    if (statsDisabled || authoritative.has(id)) return;
+    if (pending.has(id) || fetchQueue.includes(id)) return;
+    if (Date.now() < readyAt) return;
+    if (fetchBudget <= 0) return;
+
+    // On a search page the ranked payload (or its fallback) owns the data; do
+    // not race it with one request per card.
+    if (currentQuery() && !rankedSeen) return;
+
+    // Don't burn budget retrying a request that just failed.
+    const known = details.get(id);
+    if (known && known.status === "error" && Date.now() - known.at < ERROR_TTL_MS) return;
+
+    const info = pins.get(id);
+    // A ranked search pin already has an exact save count in the response.
+    if (info && info.position && info.saves != null) return;
+
+    fetchBudget -= 1;
+    enqueue(id);
+  }
+
+  function enqueue(id) {
+    if (pending.has(id) || fetchQueue.includes(id)) return;
+    fetchQueue.push(id);
+    pump();
+  }
+
+  function pump() {
+    if (pumpTimer || inflight >= MAX_INFLIGHT || fetchQueue.length === 0) return;
+
+    const id = fetchQueue.shift();
+    inflight += 1;
+    loadDetails(id).finally(() => {
+      inflight -= 1;
+      pump(); // fill the free slot
+    });
+
+    // Pace new requests; Pinterest rate-limits bursts.
+    pumpTimer = setTimeout(() => {
+      pumpTimer = 0;
+      pump();
+    }, REQUEST_GAP_MS);
   }
 
   /* ------------------------------------------------------------------ badge */
@@ -160,6 +287,9 @@
   }
 
   function attachBadge(anchor, info) {
+    // Nothing to say yet (stats still loading, or logged out on a non-search page).
+    if (info.position == null && info.saves == null && info.comments == null) return null;
+
     let badge = badgeById.get(info.id);
 
     // The card may have been re-rendered, or a better anchor may have appeared.
@@ -177,6 +307,15 @@
       anchor.appendChild(badge);
     }
 
+    const detail = details.get(info.id);
+    const comments = detail && detail.status === "ok" ? detail.data.comments : info.comments;
+
+    // Scans run on every page mutation plus a 2s sweep; only touch the DOM when
+    // the numbers actually changed.
+    const signature = [info.position, info.saves, comments].join("|");
+    if (badge.dataset.sig === signature) return badge;
+    badge.dataset.sig = signature;
+
     badge.textContent = "";
 
     // Words, not emoji: a heart means "likes" everywhere else on the web.
@@ -188,8 +327,6 @@
       );
     }
 
-    const detail = details.get(info.id);
-    const comments = detail && detail.status === "ok" ? detail.data.comments : info.comments;
     if (comments != null) {
       badge.appendChild(
         el("span", "pinrank-comment", fmt(comments) + (comments === 1 ? " comment" : " comments"))
@@ -204,9 +341,14 @@
   /**
    * Pinterest renders more than one anchor per pin card — the image and the
    * title text are separate links to the same pin. Badging every anchor drew a
-   * duplicate label at the top and the bottom of the card, so exactly one anchor
-   * is chosen per pin: the first one that wraps an image, else the first one
-   * found.
+   * duplicate label at the top and the bottom of the card, so exactly one is
+   * chosen per pin: the biggest visible one, preferring anchors that contain an
+   * image.
+   *
+   * Zero-sized anchors are skipped rather than badged: cards contain hidden
+   * links for accessibility and hover overlays, and putting the label on one of
+   * those makes the pin look unbranded. If a card has not been laid out yet, the
+   * next scan picks it up.
    */
   function scan() {
     // Forget badges whose card Pinterest has removed.
@@ -215,19 +357,32 @@
     }
 
     const chosen = new Map();
+    const viewportBottom = window.innerHeight + 300;
 
+    // Read phase: measure every anchor before touching the DOM.
     for (const anchor of document.querySelectorAll('a[href*="/pin/"]')) {
       const id = pinIdFromHref(anchor.getAttribute("href"));
-      if (!id || !pins.has(id)) continue;
+      if (!id) continue;
 
-      // Prefer the anchor that wraps the image: Pinterest also links the title
-      // text to the same pin. No measuring, so this stays cheap on a long grid.
-      const hasImage = Boolean(anchor.querySelector("img"));
+      const rect = anchor.getBoundingClientRect();
+      const area = Math.max(0, rect.width) * Math.max(0, rect.height);
+      if (area < 25) continue;
+
+      const score = area * (anchor.querySelector("img") ? 1.1 : 1);
+      const near = rect.bottom > -300 && rect.top < viewportBottom;
+
       const best = chosen.get(id);
-      if (!best || (hasImage && !best.hasImage)) chosen.set(id, { anchor, hasImage });
+      if (!best || score > best.score) chosen.set(id, { anchor, score, near });
+      else if (near) best.near = true;
     }
 
-    for (const [id, best] of chosen) attachBadge(best.anchor, pins.get(id));
+    for (const [id, best] of chosen) {
+      // The DOM tells us a pin exists even when the page's payload is stripped
+      // (profiles often return tiles without saves). Fill the gap from the API.
+      if (!pins.has(id)) pins.set(id, blankPin(id));
+      attachBadge(best.anchor, pins.get(id));
+      if (best.near) maybeFetchStats(id);
+    }
 
     // Drop any badge that is no longer the chosen one for its pin.
     for (const node of document.querySelectorAll(".pinrank-badge")) {
@@ -410,6 +565,23 @@
 
   /* ------------------------------------------------------------- data intake */
 
+  /**
+   * Pins reach us from several resources (search, related modules, previews).
+   * A thinner copy must never erase fields we already have, or a card loses its
+   * saves — or its badge entirely — when another resource mentions the same pin.
+   */
+  function mergePin(old, next) {
+    if (!old) return next;
+
+    const merged = { ...old };
+    for (const [key, value] of Object.entries(next)) {
+      if (value == null || value === "") continue;
+      if (Array.isArray(value) && value.length === 0) continue;
+      merged[key] = value;
+    }
+    return merged;
+  }
+
   function ingestLocal(pinList, startAt) {
     let position = startAt || 0;
     let added = 0;
@@ -420,7 +592,10 @@
       if (!pins.has(slim.id)) added += 1;
       pins.set(slim.id, slim);
     }
-    if (added) queueScan();
+    if (added) {
+      rankedSeen = true;
+      queueScan();
+    }
     return position;
   }
 
@@ -443,11 +618,15 @@
       if (msg.query && here && msg.query !== here) return;
 
       for (const pin of msg.pins) {
-        // A pin can show up in both the ranked list and another module; do not
-        // let the position-less copy erase its search position.
-        const seen = pins.get(pin.id);
-        const keepRank = seen && seen.position && !pin.position;
-        pins.set(pin.id, keepRank ? { ...pin, position: seen.position } : pin);
+        const old = pins.get(pin.id);
+        let merged = mergePin(old, pin);
+
+        // A fetched PinResource value outranks whatever the feed says.
+        if (old && authoritative.has(pin.id)) {
+          merged = { ...merged, saves: old.saves, comments: old.comments, repins: old.repins };
+        }
+        if (merged.position) rankedSeen = true;
+        pins.set(pin.id, merged);
       }
       queueScan();
     }
@@ -460,7 +639,11 @@
    * ask the resource endpoint ourselves. Once per query per tab.
    */
   async function fallbackSearch() {
-    if (pins.size > 0) return;
+    // Placeholders created from the DOM are not data: only skip the safety net
+    // when a pin actually carries a rank or a save count.
+    for (const pin of pins.values()) {
+      if (pin.position || pin.saves != null) return;
+    }
 
     const query = new URLSearchParams(location.search).get("q");
     if (!query) return;
@@ -502,6 +685,14 @@
     closePanel();
     pins.clear();
     badgeById.clear();
+    authoritative.clear();
+    fetchQueue.length = 0;
+    fetchBudget = PAGE_FETCH_BUDGET;
+    statsDisabled = false;
+    emptyStats = 0;
+    rankedSeen = false;
+    // Give a search page a moment to deliver ranks before paying for requests.
+    readyAt = Date.now() + (currentQuery() ? 900 : 0);
     document.querySelectorAll(".pinrank-badge").forEach((badge) => badge.remove());
     // Ask the interceptor to replay what it already holds for this query —
     // going back to a search often does not trigger a fresh request.
@@ -518,8 +709,14 @@
   }, 700);
 
   // React re-renders and virtualised grids drop badges, so re-scan when the page
-  // changes — but ignore mutations we caused ourselves, or every scan would
-  // schedule the next one.
+  // changes. Mutations caused by the overlay itself are ignored — except when one
+  // of our badges disappears, which means React rebuilt that card and the badge
+  // must be put back.
+  const isOverlayNode = (node) =>
+    node.nodeType === 1 &&
+    node.classList &&
+    (node.classList.contains("pinrank-badge") || node.classList.contains("pinrank-panel"));
+
   const observer = new MutationObserver((records) => {
     for (const record of records) {
       const target = record.target;
@@ -527,16 +724,12 @@
         continue;
       }
 
-      const touched = [...record.addedNodes, ...record.removedNodes];
-      const ours =
-        touched.length > 0 &&
-        touched.every(
-          (node) =>
-            node.nodeType === 1 &&
-            node.classList &&
-            (node.classList.contains("pinrank-badge") || node.classList.contains("pinrank-panel"))
-        );
-      if (ours) continue;
+      const added = [...record.addedNodes].filter((node) => node.nodeType === 1);
+      const removed = [...record.removedNodes].filter((node) => node.nodeType === 1);
+
+      const addedOnlyOurs = added.length > 0 && added.every(isOverlayNode);
+      const lostOurs = removed.some(isOverlayNode);
+      if (addedOnlyOurs && !lostOurs) continue;
 
       queueScan();
       return;
@@ -545,7 +738,17 @@
 
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
+  // Belt and braces: a slow sweep catches cards that rendered while the observer
+  // was busy, or anchors that only got their size after the last scan.
+  setInterval(() => {
+    if (document.hidden || pins.size === 0) return;
+    queueScan();
+  }, 2000);
+
   /* ------------------------------------------------------------------ start */
+
+  // Search ranks should arrive before we start spending requests on stats.
+  readyAt = Date.now() + (currentQuery() ? 900 : 0);
 
   window.postMessage({ source: X.TAG, type: "hello", search: Boolean(currentQuery()) }, "*");
   setTimeout(fallbackSearch, 3000);
