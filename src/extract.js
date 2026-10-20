@@ -1,5 +1,5 @@
 /**
- * Pure extraction helpers for the Pin Bus browser extension.
+ * Pure extraction helpers for the PinRank browser extension.
  *
  * Deliberately free of DOM and chrome.* APIs so the Node suite can exercise the
  * same code the extension runs. It is loaded as a plain (non-module) content
@@ -9,7 +9,7 @@
 (function (root) {
   "use strict";
 
-  const TAG = "pin-bus-ext";
+  const TAG = "pinrank-ext";
   const SEARCH_RESOURCE = "/resource/BaseSearchResource/";
   const PIN_RESOURCE = "/resource/PinResource/";
 
@@ -187,6 +187,6 @@
     slimDetail,
   };
 
-  root.PinBusExtract = api;
+  root.PinRankExtract = api;
   if (typeof module === "object" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

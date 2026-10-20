@@ -12,7 +12,7 @@
 (function () {
   "use strict";
 
-  const X = globalThis.PinBusExtract;
+  const X = globalThis.PinRankExtract;
   if (!X) return;
 
   const MAX_BUFFER = 400;
@@ -98,7 +98,7 @@
 
     XHR.prototype.open = function patchedOpen(method, url, ...rest) {
       try {
-        this.__pinBusUrl = typeof url === "string" ? url : "";
+        this.__pinRankUrl = typeof url === "string" ? url : "";
       } catch {
         /* ignore */
       }
@@ -107,7 +107,7 @@
 
     XHR.prototype.send = function patchedSend(...args) {
       try {
-        const url = this.__pinBusUrl || "";
+        const url = this.__pinRankUrl || "";
         if (url.includes(X.SEARCH_RESOURCE)) {
           this.addEventListener("load", () => {
             try {

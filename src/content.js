@@ -12,9 +12,9 @@
 (function () {
   "use strict";
 
-  const X = globalThis.PinBusExtract;
-  if (!X || window.__pinBusContent) return;
-  window.__pinBusContent = true;
+  const X = globalThis.PinRankExtract;
+  if (!X || window.__pinRankContent) return;
+  window.__pinRankContent = true;
 
   const DETAIL_TTL_MS = 10 * 60 * 1000;
   const ERROR_TTL_MS = 60 * 1000;
@@ -158,22 +158,22 @@
   }
 
   function badgeFor(anchor, info) {
-    let badge = anchor.querySelector(":scope > .pinbus-badge");
+    let badge = anchor.querySelector(":scope > .pinrank-badge");
     if (!badge) {
       if (getComputedStyle(anchor).position === "static") anchor.style.position = "relative";
-      badge = el("div", "pinbus-badge");
-      badge.setAttribute("data-pinbus", "1");
+      badge = el("div", "pinrank-badge");
+      badge.setAttribute("data-pinrank", "1");
       anchor.appendChild(badge);
     }
 
     badge.textContent = "";
 
     // Words, not emoji: a heart means "likes" everywhere else on the web.
-    if (info.position) badge.appendChild(el("span", "pinbus-rank", "#" + info.position));
+    if (info.position) badge.appendChild(el("span", "pinrank-rank", "#" + info.position));
 
     if (info.saves != null) {
       badge.appendChild(
-        el("span", "pinbus-save", fmt(info.saves) + (info.saves === 1 ? " save" : " saves"))
+        el("span", "pinrank-save", fmt(info.saves) + (info.saves === 1 ? " save" : " saves"))
       );
     }
 
@@ -181,7 +181,7 @@
     const comments = detail && detail.status === "ok" ? detail.data.comments : info.comments;
     if (comments != null) {
       badge.appendChild(
-        el("span", "pinbus-comment", fmt(comments) + (comments === 1 ? " comment" : " comments"))
+        el("span", "pinrank-comment", fmt(comments) + (comments === 1 ? " comment" : " comments"))
       );
     }
 
@@ -213,8 +213,8 @@
 
   function ensurePanel() {
     if (!panel) {
-      panel = el("div", "pinbus-panel");
-      panel.setAttribute("data-pinbus", "1");
+      panel = el("div", "pinrank-panel");
+      panel.setAttribute("data-pinrank", "1");
       (document.body || document.documentElement).appendChild(panel);
     }
     return panel;
@@ -229,14 +229,14 @@
 
     panel.textContent = "";
 
-    const head = el("div", "pinbus-head");
-    if (info && info.position) head.appendChild(el("span", "pinbus-pos", "#" + info.position));
-    head.appendChild(el("span", "pinbus-title", (info && info.title) || "(untitled)"));
+    const head = el("div", "pinrank-head");
+    if (info && info.position) head.appendChild(el("span", "pinrank-pos", "#" + info.position));
+    head.appendChild(el("span", "pinrank-title", (info && info.title) || "(untitled)"));
     panel.appendChild(head);
 
-    const stats = el("div", "pinbus-stats");
+    const stats = el("div", "pinrank-stats");
     const stat = (label, value, kind) => {
-      const box = el("div", "pinbus-stat pinbus-" + kind);
+      const box = el("div", "pinrank-stat pinrank-" + kind);
       box.appendChild(el("b", "", value));
       box.appendChild(el("span", "", label));
       return box;
@@ -246,7 +246,7 @@
     stats.appendChild(stat("repins", data ? fmt(data.repins) : "…", "repins"));
     panel.appendChild(stats);
 
-    const list = el("dl", "pinbus-rows");
+    const list = el("dl", "pinrank-rows");
     const row = (key, value) => {
       if (value == null || value === "" || value === "—") return;
       list.appendChild(el("dt", "", key));
@@ -292,9 +292,9 @@
     panel.appendChild(list);
 
     if (detail && detail.status === "error") {
-      panel.appendChild(el("div", "pinbus-note", "Comments unavailable (" + detail.error + ")"));
+      panel.appendChild(el("div", "pinrank-note", "Comments unavailable (" + detail.error + ")"));
     } else if (!data && info && info.saves == null) {
-      panel.appendChild(el("div", "pinbus-note", "Log in to Pinterest to see saves and comments."));
+      panel.appendChild(el("div", "pinrank-note", "Log in to Pinterest to see saves and comments."));
     }
   }
 
@@ -398,7 +398,7 @@
     if (msg.type === "reset") {
       pins.clear();
       closePanel();
-      document.querySelectorAll(".pinbus-badge").forEach((badge) => badge.remove());
+      document.querySelectorAll(".pinrank-badge").forEach((badge) => badge.remove());
       return;
     }
 
@@ -460,7 +460,7 @@
   function onRouteChange() {
     closePanel();
     pins.clear();
-    document.querySelectorAll(".pinbus-badge").forEach((badge) => badge.remove());
+    document.querySelectorAll(".pinrank-badge").forEach((badge) => badge.remove());
     // Ask the interceptor to replay what it already holds for this query —
     // going back to a search often does not trigger a fresh request.
     window.postMessage({ source: X.TAG, type: "hello" }, "*");

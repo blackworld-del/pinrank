@@ -1,4 +1,4 @@
-# Pin Bus — browser extension
+# PinRank — browser extension
 
 Shows **saves, comments and SEO detail on every pin** while you search Pinterest,
 so you can judge a keyword without exporting a CSV first.

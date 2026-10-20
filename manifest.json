@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Pin Bus — Pinterest SEO overlay",
+  "name": "PinRank — Pinterest SEO overlay",
   "version": "0.1.0",
   "description": "Shows saves, comments and SEO detail on every pin in Pinterest search results.",
   "minimum_chrome_version": "111",
