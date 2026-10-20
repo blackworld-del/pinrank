@@ -24,6 +24,8 @@
   /** id -> { status, data|error, at } */
   const details = new Map();
   const pending = new Map();
+  /** id -> the single badge element kept for that pin */
+  const badgeById = new Map();
 
   let panel = null;
   let panelId = "";
@@ -157,12 +159,21 @@
     return parts.join(" · ");
   }
 
-  function badgeFor(anchor, info) {
-    let badge = anchor.querySelector(":scope > .pinrank-badge");
+  function attachBadge(anchor, info) {
+    let badge = badgeById.get(info.id);
+
+    // The card may have been re-rendered, or a better anchor may have appeared.
+    if (badge && (!badge.isConnected || !anchor.contains(badge))) {
+      badge.remove();
+      badge = null;
+    }
+
     if (!badge) {
       if (getComputedStyle(anchor).position === "static") anchor.style.position = "relative";
       badge = el("div", "pinrank-badge");
       badge.setAttribute("data-pinrank", "1");
+      badge.setAttribute("data-pin", info.id);
+      badgeById.set(info.id, badge);
       anchor.appendChild(badge);
     }
 
@@ -190,14 +201,37 @@
     return badge;
   }
 
+  /**
+   * Pinterest renders more than one anchor per pin card — the image and the
+   * title text are separate links to the same pin. Badging every anchor drew a
+   * duplicate label at the top and the bottom of the card, so exactly one anchor
+   * is chosen per pin: the first one that wraps an image, else the first one
+   * found.
+   */
   function scan() {
-    const anchors = document.querySelectorAll('a[href*="/pin/"]');
-    for (const anchor of anchors) {
+    // Forget badges whose card Pinterest has removed.
+    for (const [id, badge] of badgeById) {
+      if (!badge.isConnected) badgeById.delete(id);
+    }
+
+    const chosen = new Map();
+
+    for (const anchor of document.querySelectorAll('a[href*="/pin/"]')) {
       const id = pinIdFromHref(anchor.getAttribute("href"));
-      if (!id) continue;
-      const info = pins.get(id);
-      if (!info) continue;
-      badgeFor(anchor, info);
+      if (!id || !pins.has(id)) continue;
+
+      // Prefer the anchor that wraps the image: Pinterest also links the title
+      // text to the same pin. No measuring, so this stays cheap on a long grid.
+      const hasImage = Boolean(anchor.querySelector("img"));
+      const best = chosen.get(id);
+      if (!best || (hasImage && !best.hasImage)) chosen.set(id, { anchor, hasImage });
+    }
+
+    for (const [id, best] of chosen) attachBadge(best.anchor, pins.get(id));
+
+    // Drop any badge that is no longer the chosen one for its pin.
+    for (const node of document.querySelectorAll(".pinrank-badge")) {
+      if (badgeById.get(node.getAttribute("data-pin")) !== node) node.remove();
     }
   }
 
@@ -397,6 +431,7 @@
 
     if (msg.type === "reset") {
       pins.clear();
+      badgeById.clear();
       closePanel();
       document.querySelectorAll(".pinrank-badge").forEach((badge) => badge.remove());
       return;
@@ -407,7 +442,13 @@
       const here = currentQuery();
       if (msg.query && here && msg.query !== here) return;
 
-      for (const pin of msg.pins) pins.set(pin.id, pin);
+      for (const pin of msg.pins) {
+        // A pin can show up in both the ranked list and another module; do not
+        // let the position-less copy erase its search position.
+        const seen = pins.get(pin.id);
+        const keepRank = seen && seen.position && !pin.position;
+        pins.set(pin.id, keepRank ? { ...pin, position: seen.position } : pin);
+      }
       queueScan();
     }
   });
@@ -460,10 +501,11 @@
   function onRouteChange() {
     closePanel();
     pins.clear();
+    badgeById.clear();
     document.querySelectorAll(".pinrank-badge").forEach((badge) => badge.remove());
     // Ask the interceptor to replay what it already holds for this query —
     // going back to a search often does not trigger a fresh request.
-    window.postMessage({ source: X.TAG, type: "hello" }, "*");
+    window.postMessage({ source: X.TAG, type: "hello", search: Boolean(currentQuery()) }, "*");
     // Let the hook have a moment; fall back only if it produced nothing.
     setTimeout(fallbackSearch, 2500);
     setTimeout(queueScan, 400);
@@ -475,9 +517,37 @@
     onRouteChange();
   }, 700);
 
+  // React re-renders and virtualised grids drop badges, so re-scan when the page
+  // changes — but ignore mutations we caused ourselves, or every scan would
+  // schedule the next one.
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      const target = record.target;
+      if (target && target.nodeType === 1 && target.closest && target.closest(".pinrank-badge, .pinrank-panel")) {
+        continue;
+      }
+
+      const touched = [...record.addedNodes, ...record.removedNodes];
+      const ours =
+        touched.length > 0 &&
+        touched.every(
+          (node) =>
+            node.nodeType === 1 &&
+            node.classList &&
+            (node.classList.contains("pinrank-badge") || node.classList.contains("pinrank-panel"))
+        );
+      if (ours) continue;
+
+      queueScan();
+      return;
+    }
+  });
+
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
   /* ------------------------------------------------------------------ start */
 
-  window.postMessage({ source: X.TAG, type: "hello" }, "*");
+  window.postMessage({ source: X.TAG, type: "hello", search: Boolean(currentQuery()) }, "*");
   setTimeout(fallbackSearch, 3000);
   setTimeout(queueScan, 500);
 })();

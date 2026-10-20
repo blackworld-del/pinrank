@@ -145,8 +145,33 @@
     };
   }
 
-  /** PinResource payload -> the fields that are not in the search response. */
-  function slimDetail(data) {
+  /**
+   * Walk any resource payload and return the pin-shaped objects in it.
+   *
+   * Search responses have a predictable `data.results` array, but profile,
+   * board, home-feed and related-pin resources nest pins under whatever key they
+   * like. Detecting by shape instead of key name covers all of them.
+   */
+  function findPins(node, out, depth) {
+    const found = out || [];
+    const level = typeof depth === "number" ? depth : 0;
+
+    if (!node || typeof node !== "object" || level > 5 || found.length >= 500) return found;
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        if (found.length >= 500) break;
+        if (isPin(item)) found.push(item);
+        else findPins(item, found, level + 1);
+      }
+      return found;
+    }
+
+    for (const value of Object.values(node)) findPins(value, found, level + 1);
+    return found;
+  }
+
+  /** PinResource payload -> the fields that are not in the search response. */  function slimDetail(data) {
     const d = data || {};
     const stats = (d.aggregated_pin_data && d.aggregated_pin_data.aggregated_stats) || {};
 
@@ -183,6 +208,7 @@
     cleanDomain,
     bestImage,
     hashtagsOf,
+    findPins,
     slimPin,
     slimDetail,
   };

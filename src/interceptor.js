@@ -2,9 +2,18 @@
  * MAIN-world content script.
  *
  * Runs at document_start, before Pinterest's own bundle, so it can wrap fetch
- * and XMLHttpRequest. Every search response Pinterest receives is cloned and
- * mined for pin stats — which means save counts cost zero extra requests, and
- * new pages of results are picked up as you scroll.
+ * and XMLHttpRequest. Every resource response Pinterest receives is cloned and
+ * mined for pins — which means save counts cost zero extra requests, and new
+ * pages of results are picked up as you scroll.
+ *
+ * Two kinds of surface are handled differently:
+ *
+ *   search  (BaseSearchResource)  -> pins get a real ranking position, and the
+ *                                    `type:"story"` module wrappers are skipped
+ *   anything else (profile, board, home feed, related pins) -> pins are
+ *                                    collected from whatever shape the payload
+ *                                    has, with no position, because there is no
+ *                                    ranking to report there
  *
  * It never touches the DOM or chrome.* APIs: it only posts messages that the
  * isolated-world content script listens for.
@@ -16,25 +25,45 @@
   if (!X) return;
 
   const MAX_BUFFER = 400;
+  const MAX_SEEN = 5000;
 
   let query = "";
   let rank = 0;
-  const seen = new Set();
+  const seenSearch = new Set();
+  const seenFeed = new Set();
   const buffer = [];
 
   function reset(nextQuery) {
     query = nextQuery;
     rank = 0;
-    seen.clear();
+    seenSearch.clear();
+    seenFeed.clear();
     buffer.length = 0;
     window.postMessage({ source: X.TAG, type: "reset", query }, "*");
   }
 
-  function ingest(body, url) {
-    const response = body && body.resource_response;
-    const results = response && response.data && response.data.results;
-    if (!Array.isArray(results)) return;
+  /** Keep a Set bounded without losing the most recent ids. */
+  function remember(set, id) {
+    set.add(id);
+    if (set.size <= MAX_SEEN) return;
+    const keep = [...set].slice(Math.floor(MAX_SEEN / 2));
+    set.clear();
+    for (const value of keep) set.add(value);
+  }
 
+  function publish(pins, q) {
+    if (pins.length === 0) return;
+
+    for (const pin of pins) {
+      buffer.push(pin);
+      if (buffer.length > MAX_BUFFER) buffer.shift();
+    }
+
+    window.postMessage({ source: X.TAG, type: "pins", query: q || "", pins }, "*");
+  }
+
+  /** Search results: assign a position, skip module wrappers. */
+  function ingestSearch(results, url) {
     const found = X.queryFromUrl(url);
     if (found && found !== query) reset(found);
 
@@ -42,20 +71,42 @@
     for (const item of results) {
       if (!X.isPin(item)) continue;
       const id = String(item.id);
-      if (seen.has(id)) continue;
-      seen.add(id);
+      if (seenSearch.has(id)) continue;
+      remember(seenSearch, id);
       rank += 1;
       fresh.push(X.slimPin(item, rank));
     }
 
-    if (fresh.length === 0) return;
+    publish(fresh, query);
+  }
 
-    for (const pin of fresh) {
-      buffer.push(pin);
-      if (buffer.length > MAX_BUFFER) buffer.shift();
+  /**
+   * Every other surface returns pins from resources with different names and
+   * shapes, so walk the payload for pin-shaped objects instead of hard-coding a
+   * resource name.
+   */
+  function ingestFeed(data) {
+    const fresh = [];
+    for (const item of X.findPins(data)) {
+      const id = String(item.id);
+      if (seenFeed.has(id)) continue;
+      remember(seenFeed, id);
+      fresh.push(X.slimPin(item, null)); // no ranking outside search
     }
 
-    window.postMessage({ source: X.TAG, type: "pins", query: query, pins: fresh }, "*");
+    publish(fresh, "");
+  }
+
+  function ingest(body, url) {
+    const data = body && body.resource_response && body.resource_response.data;
+    if (!data || typeof data !== "object") return;
+
+    if (url.includes(X.SEARCH_RESOURCE)) {
+      if (Array.isArray(data.results)) ingestSearch(data.results, url);
+      return;
+    }
+
+    ingestFeed(data);
   }
 
   /* ------------------------------------------------------------- fetch hook */
@@ -69,7 +120,7 @@
         const input = args[0];
         const url = typeof input === "string" ? input : (input && input.url) || "";
 
-        if (url.includes(X.SEARCH_RESOURCE)) {
+        if (url.includes("/resource/")) {
           result
             .then((res) => {
               // Clone so Pinterest's own consumer still gets a readable body.
@@ -108,7 +159,7 @@
     XHR.prototype.send = function patchedSend(...args) {
       try {
         const url = this.__pinRankUrl || "";
-        if (url.includes(X.SEARCH_RESOURCE)) {
+        if (url.includes("/resource/")) {
           this.addEventListener("load", () => {
             try {
               ingest(JSON.parse(this.responseText), url);
@@ -133,6 +184,12 @@
     const msg = event.data;
     if (!msg || msg.source !== X.TAG || msg.type !== "hello") return;
     if (buffer.length === 0) return;
-    window.postMessage({ source: X.TAG, type: "pins", query: query, pins: buffer.slice() }, "*");
+
+    // A profile or board has no ranking, so never replay search positions there.
+    const pins = msg.search
+      ? buffer.slice()
+      : buffer.map((pin) => ({ ...pin, position: null }));
+
+    window.postMessage({ source: X.TAG, type: "pins", query: query, pins }, "*");
   });
 })();
