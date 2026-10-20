@@ -42,6 +42,9 @@ cards, and the badge carries the full exact numbers as a tooltip.
 pinner and followers, board size, image size and ratio, rich-pin type,
 Pinterest's topic annotations, hashtags, alt text, and the description length.
 
+**On a pin page** — the same label sits on the main image and the panel opens on
+hover, so opening a pin keeps its numbers in view.
+
 ## How it works
 
 ```

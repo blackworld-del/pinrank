@@ -101,7 +101,8 @@
   const PLACEHOLDER_DOMAINS = new Set(["uploaded by user", "unknown", "pinterest"]);
 
   function cleanDomain(raw, link) {
-    const domain = str(raw).trim();
+    // `link_domain` is sometimes an object: { id: "michaels.com" }.
+    const domain = (raw && typeof raw === "object" ? str(raw.id) || str(raw.name) : str(raw)).trim();
     if (!domain) return hostOf(str(link));
     if (PLACEHOLDER_DOMAINS.has(domain.toLowerCase())) return "";
     return domain.replace(/^www\./, "");
@@ -193,9 +194,11 @@
     return found;
   }
 
-  /** PinResource payload -> the fields that are not in the search response. */  function slimDetail(data) {
+  /** PinResource payload -> the fields that are not in the search response. */
+  function slimDetail(data) {
     const d = data || {};
     const stats = (d.aggregated_pin_data && d.aggregated_pin_data.aggregated_stats) || {};
+    const link = str(d.link) || str(d.utm_link);
 
     return {
       saves: num(stats.saves),
@@ -206,6 +209,14 @@
       repins: num(d.repin_count),
       // PinResource is the only source with a date on profile/board pages.
       createdAt: str(d.created_at),
+      // …and the only source with the destination when the feed tile is stripped.
+      link: link,
+      domain: cleanDomain(d.domain || d.link_domain, link),
+      hasLink: Boolean(link),
+      title: str(d.title) || str(d.grid_title),
+      description: str(d.description),
+      pinner: str(d.pinner && d.pinner.username),
+      board: str(d.board && d.board.name),
       seoTitle: str(d.seo_title),
       category: str(d.category),
       interestTags: Array.isArray(d.manual_interest_tags)

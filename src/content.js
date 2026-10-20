@@ -23,7 +23,7 @@
   window.__pinRankContent = true;
 
   /** Bump with manifest.json; the hover panel prints it so a reload is provable. */
-  const VERSION = "0.1.1";
+  const VERSION = "0.1.2";
 
   const DETAIL_TTL_MS = 10 * 60 * 1000;
   const ERROR_TTL_MS = 60 * 1000;
@@ -108,6 +108,20 @@
     return match ? decodeURIComponent(match[1]) : "";
   }
 
+  /** The pin whose closeup is open, or "" anywhere else. */
+  function closeupId() {
+    const match = /^\/pin\/([^/?#]+)\/?$/.exec(location.pathname);
+    return match ? decodeURIComponent(match[1]) : "";
+  }
+
+  /** The closeup's main image container, which stands in for a pin card. */
+  function closeupHolder() {
+    return (
+      document.querySelector('[data-test-id="closeup-image-main"]') ||
+      document.querySelector('[data-test-id="story-pin-image-box"]')
+    );
+  }
+
   /** The handshake Pinterest's own client sends. */
   function resourceHeaders(sourceUrl, handler) {
     return {
@@ -172,6 +186,13 @@
             comments: d.comments != null ? d.comments : info.comments,
             repins: d.repins != null ? d.repins : info.repins,
             createdAt: d.createdAt || info.createdAt,
+            link: d.link || info.link,
+            domain: d.domain || info.domain,
+            hasLink: d.hasLink || info.hasLink,
+            title: info.title || d.title,
+            description: info.description || d.description,
+            pinner: info.pinner || d.pinner,
+            board: info.board || d.board,
           });
           authoritative.add(id);
 
@@ -392,24 +413,36 @@
       else if (near) best.near = true;
     }
 
+    // A pin closeup has no link to itself — Pinterest renders the pin as a big
+    // image plus action buttons, so that image is the card to badge.
+    const cid = closeupId();
+    if (cid) {
+      const holder = closeupHolder();
+      if (holder && holder.getBoundingClientRect().width > 0) {
+        chosen.set(cid, { anchor: holder, score: 0, near: true });
+      }
+    }
+
     for (const [id, best] of chosen) {
       // The DOM tells us a pin exists even when the page's payload is stripped
       // (profiles often return tiles without saves). Fill the gap from the API.
       if (!pins.has(id)) pins.set(id, blankPin(id));
       attachBadge(best.anchor, pins.get(id));
-      if (best.near) maybeFetchStats(id);
+
+      // On a closeup only the pin being viewed is worth a request — the related
+      // tiles below it already carry their counts in the page's own payload.
+      if (best.near && (!cid || id === cid)) maybeFetchStats(id);
     }
 
-    // Drop badges that no longer sit on the anchor for their own pin — the grid
-    // recycles cards, so a badge can outlive the pin it was drawn for.
+    // Drop badges that are not on the card currently chosen for their pin. A
+    // virtualised grid recycles cards, so a badge can outlive the pin it was
+    // drawn for; comparing with `chosen` also removes same-pin duplicates.
     for (const node of document.querySelectorAll(".pinrank-badge")) {
       const id = node.getAttribute("data-pin");
-      const holder = node.parentElement;
-      const href = holder && holder.getAttribute ? holder.getAttribute("href") : "";
-      const holderId = href ? pinIdFromHref(href) : "";
+      const best = chosen.get(id);
       const tracked = badgeById.get(id);
 
-      if (tracked === node && holderId === id) continue;
+      if (tracked === node && best && best.anchor === node.parentElement) continue;
 
       node.remove();
       if (tracked === node) badgeById.delete(id);
@@ -469,7 +502,9 @@
     };
 
     if (info) {
-      row("Domain", info.domain || (info.hasLink ? "" : "no outbound link"));
+      // "No outbound link" is a claim, so only make it once PinResource replied.
+      const linkKnown = Boolean(data) || info.hasLink || Boolean(info.domain);
+      row("Domain", info.domain || (linkKnown && !info.hasLink ? "no outbound link" : ""));
       row(
         "Pinner",
         info.pinner
@@ -512,7 +547,7 @@
 
     if (detail && detail.status === "error") {
       panel.appendChild(el("div", "pinrank-note", "Comments unavailable (" + detail.error + ")"));
-    } else if (!data && info && info.saves == null) {
+    } else if (detail && detail.status === "ok" && info && info.saves == null) {
       panel.appendChild(el("div", "pinrank-note", "Log in to Pinterest to see saves and comments."));
     }
 
@@ -559,21 +594,41 @@
 
   /* ------------------------------------------------------------------ hover */
 
+  /**
+   * What the pointer is over: a pin card, or — on a closeup — the main image,
+   * which has no anchor of its own.
+   */
+  function hoverTarget(node) {
+    if (!node || !node.closest) return null;
+
+    const anchor = node.closest('a[href*="/pin/"]');
+    if (anchor) {
+      const id = pinIdFromHref(anchor.getAttribute("href"));
+      if (id) return { holder: anchor, id };
+    }
+
+    const cid = closeupId();
+    const holder = cid
+      ? node.closest('[data-test-id="closeup-image-main"], [data-test-id="story-pin-image-box"]')
+      : null;
+
+    return holder ? { holder, id: cid } : null;
+  }
+
   document.addEventListener(
     "mouseover",
     (event) => {
-      const anchor = event.target && event.target.closest && event.target.closest('a[href*="/pin/"]');
-      if (!anchor || anchor === currentAnchor) return;
+      const target = hoverTarget(event.target);
+      if (!target || target.holder === currentAnchor) return;
 
-      const id = pinIdFromHref(anchor.getAttribute("href"));
-      const info = pins.get(id);
+      const info = pins.get(target.id);
       if (!info) return;
 
-      currentAnchor = anchor;
+      currentAnchor = target.holder;
       clearTimeout(hideTimer);
       clearTimeout(hoverTimer);
       hoverTimer = setTimeout(() => {
-        if (currentAnchor === anchor) openPanel(anchor, info);
+        if (currentAnchor === target.holder) openPanel(target.holder, info);
       }, 220);
     },
     true
@@ -582,9 +637,9 @@
   document.addEventListener(
     "mouseout",
     (event) => {
-      const anchor = event.target && event.target.closest && event.target.closest('a[href*="/pin/"]');
-      if (!anchor || anchor !== currentAnchor) return;
-      if (event.relatedTarget && anchor.contains(event.relatedTarget)) return;
+      if (!currentAnchor) return;
+      if (event.relatedTarget && currentAnchor.contains(event.relatedTarget)) return;
+      if (event.target !== currentAnchor && !currentAnchor.contains(event.target)) return;
 
       clearTimeout(hoverTimer);
       currentAnchor = null;

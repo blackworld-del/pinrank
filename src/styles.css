@@ -10,6 +10,16 @@
   text-align: left;
 }
 
+/*
+ * One palette for both surfaces: white paper, black text, and colour only where
+ * a number needs to be told apart from its neighbours.
+ *
+ *   saves    pine green    #1f6f5c
+ *   comments burnt orange  #c2410c
+ *   repins   slate         #5a6b7b
+ *   age      walnut        #8a6a4f
+ */
+
 /* ------------------------------------------------------------------- badge */
 
 .pinrank-badge {
@@ -25,16 +35,15 @@
   max-width: calc(100% - 16px);
   padding: 4px 9px;
   border-radius: 8px;
-  background: rgba(28, 26, 22, 0.86);
-  color: #fbfaf7;
+  border: 1px solid rgba(20, 20, 20, 0.16);
+  background: #ffffff;
+  color: #141414;
   font-size: 11px;
   font-weight: 600;
   line-height: 1.25;
   letter-spacing: 0.01em;
   pointer-events: none;
-  box-shadow: 0 1px 4px rgba(20, 18, 15, 0.3);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 1px 5px rgba(20, 18, 15, 0.2);
 }
 
 /* Never let a number break away from its label. */
@@ -45,33 +54,25 @@
 
 .pinrank-badge .pinrank-rank {
   padding-right: 8px;
-  border-right: 1px solid rgba(251, 250, 247, 0.22);
-  color: #f3c77b;
+  border-right: 1px solid rgba(20, 20, 20, 0.16);
+  color: #141414;
 }
 
 .pinrank-badge .pinrank-save {
-  color: #ffffff;
+  color: #1f6f5c;
 }
 
 .pinrank-badge .pinrank-comment {
-  color: #ffa45b;
+  color: #c2410c;
 }
 
 .pinrank-badge .pinrank-age {
-  color: #cfc9bf;
+  color: #8a6a4f;
 }
 
 /* ------------------------------------------------------------------- panel */
 
 .pinrank-panel {
-  /* Warm paper and a single accent. Nothing here should look like a dashboard. */
-  --ink: #201e1b;
-  --muted: #7a746a;
-  --faint: #a39c90;
-  --hair: rgba(32, 30, 27, 0.11);
-  --paper: #faf9f6;
-  --accent: #c2410c;
-
   position: fixed;
   z-index: 2147483000;
   width: 318px;
@@ -79,12 +80,12 @@
   overflow: hidden;
   padding: 14px 15px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(32, 30, 27, 0.14);
-  background: var(--paper);
-  color: var(--ink);
+  border: 1px solid rgba(20, 20, 20, 0.13);
+  background: #ffffff;
+  color: #141414;
   font-size: 12px;
   line-height: 1.45;
-  box-shadow: 0 10px 28px rgba(25, 22, 18, 0.16);
+  box-shadow: 0 10px 28px rgba(25, 22, 18, 0.14);
   pointer-events: none;
 }
 
@@ -99,8 +100,8 @@
   flex: 0 0 auto;
   padding: 2px 6px;
   border-radius: 4px;
-  background: var(--ink);
-  color: var(--paper);
+  background: #141414;
+  color: #ffffff;
   font-size: 10.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -110,7 +111,7 @@
   font-size: 13px;
   font-weight: 600;
   line-height: 1.35;
-  color: var(--ink);
+  color: #141414;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -123,8 +124,8 @@
   align-items: stretch;
   margin: 0 0 12px;
   padding: 9px 0 10px;
-  border-top: 1px solid var(--hair);
-  border-bottom: 1px solid var(--hair);
+  border-top: 1px solid rgba(20, 20, 20, 0.1);
+  border-bottom: 1px solid rgba(20, 20, 20, 0.1);
 }
 
 .pinrank-stat {
@@ -138,7 +139,7 @@
 }
 
 .pinrank-stat + .pinrank-stat {
-  border-left: 1px solid var(--hair);
+  border-left: 1px solid rgba(20, 20, 20, 0.1);
 }
 
 .pinrank-stat b {
@@ -157,15 +158,19 @@
   font-weight: 500;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: #6d6961;
+}
+
+.pinrank-stat.pinrank-saves b {
+  color: #1f6f5c;
 }
 
 .pinrank-stat.pinrank-comments b {
-  color: var(--accent);
+  color: #c2410c;
 }
 
 .pinrank-stat.pinrank-repins b {
-  color: var(--muted);
+  color: #5a6b7b;
 }
 
 .pinrank-rows {
@@ -176,7 +181,7 @@
 }
 
 .pinrank-rows dt {
-  color: var(--muted);
+  color: #6d6961;
   font-size: 10.5px;
   padding-top: 1px;
 }
@@ -184,39 +189,24 @@
 .pinrank-rows dd {
   margin: 0;
   font-size: 12px;
-  color: var(--ink);
+  color: #141414;
   overflow-wrap: anywhere;
 }
 
 .pinrank-note {
   margin-top: 10px;
   padding-top: 9px;
-  border-top: 1px solid var(--hair);
-  color: var(--muted);
+  border-top: 1px solid rgba(20, 20, 20, 0.1);
+  color: #6d6961;
   font-size: 10.5px;
 }
 
 .pinrank-foot {
   margin-top: 9px;
-  color: var(--faint);
+  color: #9b968d;
   font-size: 9px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-/* Same paper, turned down for people browsing Pinterest in dark mode. */
-@media (prefers-color-scheme: dark) {
-  .pinrank-panel {
-    --ink: #ece9e2;
-    --muted: #a29b90;
-    --faint: #7b756b;
-    --hair: rgba(236, 233, 226, 0.14);
-    --paper: #1c1b18;
-    --accent: #f08a4b;
-
-    border-color: rgba(236, 233, 226, 0.16);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
-  }
 }
 
 @media (prefers-reduced-motion: no-preference) {

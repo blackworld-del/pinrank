@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "PinRank — Pinterest SEO overlay",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Shows position, saves, comments and pin age on every pin you browse on Pinterest.",
   "minimum_chrome_version": "111",
   "icons": {
