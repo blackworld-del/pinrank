@@ -14,7 +14,7 @@ counts and pinning permissions of their own login.
 
 1. Open `chrome://extensions` (or `edge://extensions`).
 2. Turn on **Developer mode**.
-3. Click **Load unpacked** and pick this `extension/` folder.
+3. Click **Load unpacked** and pick this folder (the one containing `manifest.json`).
 4. Open any Pinterest search, e.g.
    <https://www.pinterest.com/search/pins/?q=crochet%20coasters%20flower>.
 
@@ -106,6 +106,7 @@ script falls back to calling `BaseSearchResource` itself (once per query).
 
 ## Relationship to the CLI
 
-The extension is for browsing. The CLI (`node src/cli.js "<keyword>"`) is for
-bulk research: many keywords, full CSV export, position history and a
-competitor-domain view. They use the same extraction rules.
+The extension is for browsing. The CLI is a separate local tool
+(`node src/cli.js "<keyword>"`) for bulk research: many keywords, full CSV
+export, position history and a competitor-domain view. It is not part of this
+repository. Both use the same extraction rules.
