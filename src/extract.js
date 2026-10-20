@@ -17,6 +17,28 @@
   const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
   /**
+   * Compact age for a badge: `today`, `5d`, `3mo`, `2y`. Pinterest reports
+   * `created_at` as an RFC-822-ish string ("Wed, 30 Sep 2026 16:06:53 +0000").
+   */
+  function ageLabel(iso, now) {
+    const then = Date.parse(str(iso));
+    if (Number.isNaN(then)) return "";
+
+    const days = Math.max(0, ((now == null ? Date.now() : now) - then) / 86400000);
+    if (days < 1) return "today";
+    if (days < 30) return Math.max(1, Math.round(days)) + "d";
+    if (days < 365) return Math.max(1, Math.min(11, Math.round(days / 30))) + "mo";
+    return Math.max(1, Math.round(days / 365)) + "y";
+  }
+
+  /** The calendar date behind a Pinterest timestamp, in UTC: `2026-10-02`. */
+  function isoDate(iso) {
+    const then = Date.parse(str(iso));
+    if (Number.isNaN(then)) return "";
+    return new Date(then).toISOString().slice(0, 10);
+  }
+
+  /**
    * A real pin — not a `type: "story"` carousel, a board, or a shopping module.
    * Logged-in responses interleave those with the actual ranked pins.
    */
@@ -182,6 +204,8 @@
         (d.aggregated_pin_data && d.aggregated_pin_data.comment_count) ?? d.comment_count
       ),
       repins: num(d.repin_count),
+      // PinResource is the only source with a date on profile/board pages.
+      createdAt: str(d.created_at),
       seoTitle: str(d.seo_title),
       category: str(d.category),
       interestTags: Array.isArray(d.manual_interest_tags)
@@ -201,6 +225,8 @@
     PIN_RESOURCE,
     str,
     num,
+    ageLabel,
+    isoDate,
     isPin,
     readStat,
     queryFromUrl,

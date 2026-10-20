@@ -25,21 +25,22 @@ Reload a tab that was already open. The extension needs Chrome/Edge 111+.
 **On every card** — a small label in the top-left:
 
 ```
-#6  21.8k saves  51 comments
+#6  21.8k saves  51 comments  3mo
 ```
 
 - `#6` — its position in the search results (modules and ads are not counted).
   Search pages only: profiles and boards have no ranking to report
 - `21.8k saves` — save count
 - `51 comments` — comment count
+- `3mo` — age of the pin (created date). The tooltip carries the exact date
 
 Counts are read from the pin itself, so they match the number on the pin page
 rather than a cached feed snapshot. Labels wrap onto a second line on narrow
 cards, and the badge carries the full exact numbers as a tooltip.
 
-**On hover** — a panel with saves / comments / repins, domain, pinner and
-followers, board size, pin age, image size and ratio, rich-pin type, Pinterest's
-topic annotations, hashtags, alt text, and the description length.
+**On hover** — a panel with saves / comments / repins, the created date, domain,
+pinner and followers, board size, image size and ratio, rich-pin type,
+Pinterest's topic annotations, hashtags, alt text, and the description length.
 
 ## How it works
 
@@ -85,7 +86,7 @@ script falls back to calling `BaseSearchResource` itself (once per query).
 - **You must be logged in** for saves and comments. Logged out, Pinterest does
   not send them and the badge shows whatever is public.
 - **No rank outside search.** Profiles, boards and the home feed have no ordering
-  to report, so those badges show saves and comments only.
+  to report, so those badges show saves, comments and age only.
 - **On search pages**, save counts ride on the ranked payload; comments for a pin
   are fetched on hover. On profiles and boards both counts are fetched up front
   for visible pins.

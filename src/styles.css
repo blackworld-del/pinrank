@@ -57,6 +57,10 @@
   color: #8fe3c0;
 }
 
+.pinrank-badge .pinrank-age {
+  color: #c9c9d1;
+}
+
 /* ------------------------------------------------------------------- panel */
 
 .pinrank-panel {
@@ -172,6 +176,14 @@
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   color: rgba(244, 244, 245, 0.55);
   font-size: 10.5px;
+}
+
+.pinrank-foot {
+  margin-top: 8px;
+  color: rgba(244, 244, 245, 0.3);
+  font-size: 9.5px;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
 }
 
 @media (prefers-reduced-motion: no-preference) {

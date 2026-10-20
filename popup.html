@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>PinRank</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        width: 290px;
+        margin: 0;
+        padding: 15px 16px 13px;
+        font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+          Arial, sans-serif;
+        color: #18181b;
+        background: #ffffff;
+      }
+
+      .head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 11px;
+      }
+
+      .head img {
+        width: 36px;
+        height: 36px;
+        border-radius: 9px;
+      }
+
+      .head h1 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+
+      .head p {
+        margin: 1px 0 0;
+        font-size: 11px;
+        color: #71717a;
+      }
+
+      ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      li {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        padding: 5px 0;
+        color: #3f3f46;
+      }
+
+      li b {
+        flex: 0 0 auto;
+        min-width: 74px;
+        font-weight: 600;
+        color: #18181b;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .note {
+        margin: 11px 0 0;
+        padding-top: 10px;
+        border-top: 1px solid #e4e4e7;
+        font-size: 11px;
+        color: #71717a;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body {
+          color: #f4f4f5;
+          background: #18181b;
+        }
+
+        .head p,
+        .note {
+          color: #a1a1aa;
+        }
+
+        li {
+          color: #d4d4d8;
+        }
+
+        li b {
+          color: #fafafa;
+        }
+
+        .note {
+          border-top-color: #27272a;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="head">
+      <img src="icons/icon48.png" alt="" />
+      <div>
+        <h1>PinRank</h1>
+        <p>Pinterest SEO overlay</p>
+      </div>
+    </div>
+
+    <ul>
+      <li><b>#position</b> rank in the current search</li>
+      <li><b>saves</b> total saves on the pin</li>
+      <li><b>comments</b> total comments on the pin</li>
+      <li><b>age</b> when the pin was created</li>
+    </ul>
+
+    <p class="note">
+      Open any Pinterest search, profile, board or home feed. Hover a pin for the full breakdown.
+      Counts use your own logged-in session.
+    </p>
+  </body>
+</html>

@@ -22,6 +22,9 @@
   if (!X || window.__pinRankContent) return;
   window.__pinRankContent = true;
 
+  /** Bump with manifest.json; the hover panel prints it so a reload is provable. */
+  const VERSION = "0.1.1";
+
   const DETAIL_TTL_MS = 10 * 60 * 1000;
   const ERROR_TTL_MS = 60 * 1000;
 
@@ -78,13 +81,6 @@
       return (k < 10 ? k.toFixed(1) : String(Math.round(k))) + "k";
     }
     return (value / 1000000).toFixed(1) + "M";
-  }
-
-  function ageDays(iso) {
-    if (!iso) return null;
-    const then = Date.parse(iso);
-    if (Number.isNaN(then)) return null;
-    return Math.max(0, Math.round((Date.now() - then) / 86400000));
   }
 
   function currentQuery() {
@@ -175,6 +171,7 @@
             saves: d.saves != null ? d.saves : info.saves,
             comments: d.comments != null ? d.comments : info.comments,
             repins: d.repins != null ? d.repins : info.repins,
+            createdAt: d.createdAt || info.createdAt,
           });
           authoritative.add(id);
 
@@ -287,6 +284,9 @@
     if (info.position) parts.push("position " + info.position);
     if (info.saves != null) parts.push(info.saves.toLocaleString() + " saves");
     if (comments != null) parts.push(comments.toLocaleString() + " comments");
+    const created = X.isoDate(info.createdAt);
+    if (created) parts.push("created " + created);
+    if (info.id) parts.push("pin " + info.id);
     return parts.join(" · ");
   }
 
@@ -322,10 +322,11 @@
 
     const detail = details.get(info.id);
     const comments = detail && detail.status === "ok" ? detail.data.comments : info.comments;
+    const age = X.ageLabel(info.createdAt);
 
     // Scans run on every page mutation plus a 2s sweep; only touch the DOM when
     // the numbers actually changed.
-    const signature = [info.position, info.saves, comments].join("|");
+    const signature = [info.position, info.saves, comments, age].join("|");
     if (badge.dataset.sig === signature) return badge;
     badge.dataset.sig = signature;
 
@@ -345,6 +346,8 @@
         el("span", "pinrank-comment", fmt(comments) + (comments === 1 ? " comment" : " comments"))
       );
     }
+
+    if (age) badge.appendChild(el("span", "pinrank-age", age));
 
     badge.title = badgeTitle(info, comments);
 
@@ -480,8 +483,12 @@
           : ""
       );
 
-      const days = ageDays(info.createdAt);
-      row("Published", days != null ? days + "d ago" : "");
+      const created = X.isoDate(info.createdAt);
+      const age = X.ageLabel(info.createdAt);
+      row(
+        "Created",
+        created ? created + (age ? (age === "today" ? " (today)" : " (" + age + " ago)") : "") : ""
+      );
 
       if (info.width && info.height) {
         row("Image", info.width + "×" + info.height + " (" + (info.width / info.height).toFixed(2) + ")");
@@ -508,6 +515,8 @@
     } else if (!data && info && info.saves == null) {
       panel.appendChild(el("div", "pinrank-note", "Log in to Pinterest to see saves and comments."));
     }
+
+    panel.appendChild(el("div", "pinrank-foot", "PinRank " + VERSION));
   }
 
   function positionPanel(anchor) {
@@ -769,6 +778,8 @@
   }, 2000);
 
   /* ------------------------------------------------------------------ start */
+
+  console.info("[PinRank] overlay " + VERSION);
 
   // Search ranks should arrive before we start spending requests on stats.
   readyAt = Date.now() + (currentQuery() ? 900 : 0);
