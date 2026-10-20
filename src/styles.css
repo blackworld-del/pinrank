@@ -1,0 +1,184 @@
+/* Pin Bus overlay — everything is namespaced so it cannot collide with Pinterest. */
+
+.pinbus-badge,
+.pinbus-panel {
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  direction: ltr;
+  text-align: left;
+}
+
+/* ------------------------------------------------------------------- badge */
+
+.pinbus-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(17, 17, 19, 0.82);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.pinbus-badge .pinbus-rank {
+  color: #ffd166;
+  font-variant-numeric: tabular-nums;
+}
+
+.pinbus-badge .pinbus-save {
+  font-variant-numeric: tabular-nums;
+}
+
+.pinbus-badge .pinbus-comment {
+  color: #8fe3c0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------- panel */
+
+.pinbus-panel {
+  position: fixed;
+  z-index: 2147483000;
+  width: 320px;
+  max-height: 76vh;
+  overflow: hidden;
+  padding: 12px 13px 11px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(18, 18, 21, 0.97);
+  color: #f4f4f5;
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.pinbus-head {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-bottom: 9px;
+}
+
+.pinbus-pos {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: rgba(255, 209, 102, 0.14);
+  color: #ffd166;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.pinbus-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pinbus-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.pinbus-stat {
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.pinbus-stat b {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.pinbus-stat span {
+  display: block;
+  font-size: 10px;
+  color: rgba(244, 244, 245, 0.58);
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+}
+
+.pinbus-stat.pinbus-saves b {
+  color: #ff8fa3;
+}
+.pinbus-stat.pinbus-comments b {
+  color: #8fe3c0;
+}
+.pinbus-stat.pinbus-repins b {
+  color: #9ecbff;
+}
+
+.pinbus-rows {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 3px 9px;
+  margin: 0;
+  padding-top: 9px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pinbus-rows dt {
+  color: rgba(244, 244, 245, 0.52);
+  font-size: 10.5px;
+  padding-top: 1px;
+}
+
+.pinbus-rows dd {
+  margin: 0;
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+}
+
+.pinbus-note {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(244, 244, 245, 0.55);
+  font-size: 10.5px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pinbus-panel {
+    animation: pinbus-in 90ms ease-out;
+  }
+}
+
+@keyframes pinbus-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
