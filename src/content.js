@@ -149,6 +149,14 @@
 
   /* ------------------------------------------------------------------ badge */
 
+  function badgeTitle(info, comments) {
+    const parts = [];
+    if (info.position) parts.push("position " + info.position);
+    if (info.saves != null) parts.push(info.saves.toLocaleString() + " saves");
+    if (comments != null) parts.push(comments.toLocaleString() + " comments");
+    return parts.join(" · ");
+  }
+
   function badgeFor(anchor, info) {
     let badge = anchor.querySelector(":scope > .pinbus-badge");
     if (!badge) {
@@ -160,17 +168,24 @@
 
     badge.textContent = "";
 
+    // Words, not emoji: a heart means "likes" everywhere else on the web.
     if (info.position) badge.appendChild(el("span", "pinbus-rank", "#" + info.position));
+
     if (info.saves != null) {
-      badge.appendChild(el("span", "pinbus-save", "♥ " + fmt(info.saves)));
+      badge.appendChild(
+        el("span", "pinbus-save", fmt(info.saves) + (info.saves === 1 ? " save" : " saves"))
+      );
     }
 
     const detail = details.get(info.id);
-    const comments =
-      detail && detail.status === "ok" ? detail.data.comments : info.comments;
+    const comments = detail && detail.status === "ok" ? detail.data.comments : info.comments;
     if (comments != null) {
-      badge.appendChild(el("span", "pinbus-comment", "💬 " + fmt(comments)));
+      badge.appendChild(
+        el("span", "pinbus-comment", fmt(comments) + (comments === 1 ? " comment" : " comments"))
+      );
     }
+
+    badge.title = badgeTitle(info, comments);
 
     return badge;
   }

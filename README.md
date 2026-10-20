@@ -18,15 +18,18 @@ Reload a tab that was already open. The extension needs Chrome/Edge 111+.
 
 ## What you get
 
-**On every card** — a small pill in the top-left:
+**On every card** — a small label in the top-left:
 
 ```
-#6  ♥ 21.8k  💬 51
+#6  21.8k saves  51 comments
 ```
 
 - `#6` — its position in the search results (modules and ads are not counted)
-- `♥ 21.8k` — saves
-- `💬 51` — comments, added once that pin has been inspected
+- `21.8k saves` — save count
+- `51 comments` — comment count, added once that pin has been inspected
+
+Labels wrap onto a second line on narrow cards, and the badge carries the full
+exact numbers as a tooltip.
 
 **On hover** — a panel with saves / comments / repins, domain, pinner and
 followers, board size, pin age, image size and ratio, rich-pin type, Pinterest's

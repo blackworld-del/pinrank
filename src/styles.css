@@ -18,35 +18,43 @@
   left: 8px;
   z-index: 9;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(17, 17, 19, 0.82);
+  column-gap: 8px;
+  row-gap: 2px;
+  max-width: calc(100% - 16px);
+  padding: 4px 9px;
+  border-radius: 10px;
+  background: rgba(17, 17, 19, 0.84);
   color: #fff;
   font-size: 11px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.25;
   letter-spacing: 0.01em;
-  white-space: nowrap;
   pointer-events: none;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
 
-.pinbus-badge .pinbus-rank {
-  color: #ffd166;
+/* Never let a number break away from its label. */
+.pinbus-badge > span {
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
+.pinbus-badge .pinbus-rank {
+  padding-right: 8px;
+  border-right: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffd166;
+}
+
 .pinbus-badge .pinbus-save {
-  font-variant-numeric: tabular-nums;
+  color: #fff;
 }
 
 .pinbus-badge .pinbus-comment {
   color: #8fe3c0;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ------------------------------------------------------------------- panel */
