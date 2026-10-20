@@ -23,7 +23,7 @@
   window.__pinRankContent = true;
 
   /** Bump with manifest.json; the hover panel prints it so a reload is provable. */
-  const VERSION = "0.1.4";
+  const VERSION = "0.1.5";
 
   const DETAIL_TTL_MS = 10 * 60 * 1000;
   const ERROR_TTL_MS = 60 * 1000;
@@ -537,7 +537,10 @@
     }
 
     if (data) {
-      row("SEO title", data.seoTitle);
+      // Pinterest's seo_title is the auto-generated "Pin on <board>" fallback it
+      // puts in the page <title> when the pin has no title of its own. Showing it
+      // beside a real title only repeats the board, so surface it when it is used.
+      if (!info.title && data.seoTitle) row("SEO title", data.seoTitle + " (auto)");
       row("Category", data.category);
       if (data.interestTags.length) row("Interest tags", data.interestTags.join("; "));
       if (data.hashtags.length) row("Pin hashtags", data.hashtags.join(" "));
