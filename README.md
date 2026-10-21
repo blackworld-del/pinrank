@@ -42,8 +42,37 @@ cards, and the badge carries the full exact numbers as a tooltip.
 pinner and followers, board size, image size and ratio, rich-pin type,
 Pinterest's topic annotations, hashtags, alt text, and the description length.
 
+**Save pin** — a button at the bottom of that panel collects the pin. Saved pins
+get a `✓ saved` mark on their badge, and the toolbar icon lists how many are
+stored and exports them as one CSV.
+
 **On a pin page** — the same label sits on the main image and the panel opens on
 hover, so opening a pin keeps its numbers in view.
+
+## Saving pins and exporting
+
+1. Hover a pin and click **Save pin**. The count goes up on the toolbar icon.
+2. Repeat on as many pins as you like, on any Pinterest page.
+3. Click the PinRank icon → **Export CSV**.
+
+The CSV is a snapshot of what the overlay knew when you clicked, so later edits
+on Pinterest cannot change a list you already collected. One row per pin, with:
+
+```
+saved_at, position, pin_id, pin_url, title, description, saves, comments,
+repins, created_at, domain, outbound_link, pinner, pinner_name, followers,
+board, board_pins, image_width, image_height, aspect_ratio, rich_type,
+rich_site, pinterest_topics, hashtags, alt_text, seo_title, category,
+interest_tags, promoted, search_query, source_url
+```
+
+`position` and `search_query` are filled when you save from a search page; on
+profiles and boards they are blank. The file is UTF-8 with a BOM, so Excel opens
+it correctly, and commas, quotes and line breaks inside descriptions are escaped.
+
+**Clear** empties the list (the CSV you already downloaded is untouched). Saved
+pins live in `chrome.storage.local` for this browser profile only — they are not
+synced and never leave your machine.
 
 ## How it works
 
@@ -82,7 +111,9 @@ script falls back to calling `BaseSearchResource` itself (once per query).
 
 - All traffic goes to `www.pinterest.com`. Nothing is sent anywhere else.
 - No analytics, no third-party code, no dependencies.
-- Nothing is stored on disk: just an in-memory cache for the lifetime of the tab.
+- Pin stats are cached in memory for the lifetime of the tab. Saved pins are kept
+  in `chrome.storage.local` for this browser profile so the popup can export
+  them; they are not synced and are removed when you press **Clear**.
 
 ## Limitations
 

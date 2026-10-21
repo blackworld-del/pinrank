@@ -5,7 +5,7 @@
     <title>PinRank</title>
     <style>
       :root {
-        color-scheme: light dark;
+        color-scheme: light;
       }
 
       * {
@@ -13,12 +13,12 @@
       }
 
       body {
-        width: 290px;
+        width: 292px;
         margin: 0;
         padding: 15px 16px 13px;
         font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
           Arial, sans-serif;
-        color: #18181b;
+        color: #141414;
         background: #ffffff;
       }
 
@@ -26,7 +26,7 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        margin-bottom: 11px;
+        margin-bottom: 12px;
       }
 
       .head img {
@@ -48,58 +48,109 @@
         color: #71717a;
       }
 
-      ul {
-        margin: 0;
+      .saved {
+        padding-top: 12px;
+        border-top: 1px solid #e7e3dc;
+      }
+
+      .saved-top {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .count {
+        font-size: 12.5px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .ghost {
         padding: 0;
+        border: 0;
+        background: none;
+        font: inherit;
+        font-size: 11px;
+        color: #8a857c;
+        cursor: pointer;
+      }
+
+      .ghost:hover {
+        color: #141414;
+      }
+
+      .ghost:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+
+      .primary {
+        width: 100%;
+        margin-top: 9px;
+        padding: 7px 10px;
+        border: 1px solid #141414;
+        border-radius: 6px;
+        background: #141414;
+        color: #ffffff;
+        font: inherit;
+        font-size: 11.5px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .primary:hover:not(:disabled) {
+        background: #2b2b2b;
+        border-color: #2b2b2b;
+      }
+
+      .primary:disabled {
+        background: #ffffff;
+        border-color: rgba(20, 20, 20, 0.18);
+        color: #a6a19a;
+        cursor: default;
+      }
+
+      .hint {
+        margin: 7px 0 0;
+        font-size: 10.5px;
+        color: #8a857c;
+      }
+
+      .hint b {
+        color: #141414;
+        font-weight: 600;
+      }
+
+      .legend {
+        margin: 13px 0 0;
+        padding: 11px 0 0;
+        border-top: 1px solid #e7e3dc;
         list-style: none;
       }
 
-      li {
+      .legend li {
         display: flex;
         align-items: baseline;
         gap: 8px;
-        padding: 5px 0;
+        padding: 4px 0;
         color: #3f3f46;
       }
 
-      li b {
+      .legend b {
         flex: 0 0 auto;
         min-width: 74px;
         font-weight: 600;
-        color: #18181b;
+        color: #141414;
         font-variant-numeric: tabular-nums;
       }
 
       .note {
-        margin: 11px 0 0;
+        margin: 10px 0 0;
         padding-top: 10px;
-        border-top: 1px solid #e4e4e7;
+        border-top: 1px solid #e7e3dc;
         font-size: 11px;
         color: #71717a;
-      }
-
-      @media (prefers-color-scheme: dark) {
-        body {
-          color: #f4f4f5;
-          background: #18181b;
-        }
-
-        .head p,
-        .note {
-          color: #a1a1aa;
-        }
-
-        li {
-          color: #d4d4d8;
-        }
-
-        li b {
-          color: #fafafa;
-        }
-
-        .note {
-          border-top-color: #27272a;
-        }
       }
     </style>
   </head>
@@ -112,7 +163,16 @@
       </div>
     </div>
 
-    <ul>
+    <section class="saved">
+      <div class="saved-top">
+        <span id="count" class="count">0 pins saved</span>
+        <button id="clear" class="ghost" type="button" disabled>Clear</button>
+      </div>
+      <button id="export" class="primary" type="button" disabled>Export CSV</button>
+      <p class="hint">Hover any pin and press <b>Save pin</b> to collect it.</p>
+    </section>
+
+    <ul class="legend">
       <li><b>#position</b> rank in the current search</li>
       <li><b>saves</b> total saves on the pin</li>
       <li><b>comments</b> total comments on the pin</li>
@@ -120,8 +180,11 @@
     </ul>
 
     <p class="note">
-      Open any Pinterest search, profile, board or home feed. Hover a pin for the full breakdown.
-      Counts use your own logged-in session.
+      Counts use your own logged-in session. Saved pins stay in this browser until you clear
+      them.
     </p>
+
+    <script src="src/extract.js"></script>
+    <script src="popup.js"></script>
   </body>
 </html>

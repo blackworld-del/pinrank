@@ -100,6 +100,60 @@
   /** Pinterest uses these as stand-ins when a pin has no real destination. */
   const PLACEHOLDER_DOMAINS = new Set(["uploaded by user", "unknown", "pinterest"]);
 
+  /* ------------------------------------------------------------------- csv */
+
+  const CSV_COLUMNS = [
+    ["saved_at", (r) => r.savedAt],
+    ["position", (r) => r.position],
+    ["pin_id", (r) => r.id],
+    ["pin_url", (r) => (r.id ? "https://www.pinterest.com/pin/" + r.id + "/" : "")],
+    ["title", (r) => r.title],
+    ["description", (r) => r.description],
+    ["saves", (r) => r.saves],
+    ["comments", (r) => r.comments],
+    ["repins", (r) => r.repins],
+    ["created_at", (r) => r.createdAt],
+    ["domain", (r) => r.domain],
+    ["outbound_link", (r) => r.link],
+    ["pinner", (r) => r.pinner],
+    ["pinner_name", (r) => r.pinnerName],
+    ["followers", (r) => r.followers],
+    ["board", (r) => r.board],
+    ["board_pins", (r) => r.boardPins],
+    ["image_width", (r) => r.width],
+    ["image_height", (r) => r.height],
+    ["aspect_ratio", (r) => (r.width && r.height ? (r.width / r.height).toFixed(2) : "")],
+    ["rich_type", (r) => r.richType],
+    ["rich_site", (r) => r.richSite],
+    ["pinterest_topics", (r) => r.topics],
+    ["hashtags", (r) => r.hashtags],
+    ["alt_text", (r) => r.alt],
+    ["seo_title", (r) => r.seoTitle],
+    ["category", (r) => r.category],
+    ["interest_tags", (r) => r.interestTags],
+    ["promoted", (r) => (r.promoted ? "yes" : "no")],
+    ["search_query", (r) => r.query],
+    ["source_url", (r) => r.sourceUrl],
+  ];
+
+  /** Quote a value the way spreadsheets expect; arrays become "; "-separated. */
+  function csvCell(value) {
+    if (value == null) return "";
+    const text = Array.isArray(value) ? value.join("; ") : String(value);
+    return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+  }
+
+  /** Saved-pin records -> a spreadsheet-ready CSV (CRLF, no BOM — add it on export). */
+  function toCsv(records) {
+    const lines = [CSV_COLUMNS.map(([name]) => csvCell(name)).join(",")];
+
+    for (const record of records || []) {
+      lines.push(CSV_COLUMNS.map(([, read]) => csvCell(read(record || {}))).join(","));
+    }
+
+    return lines.join("\r\n") + "\r\n";
+  }
+
   function cleanDomain(raw, link) {
     // `link_domain` is sometimes an object: { id: "michaels.com" }.
     const domain = (raw && typeof raw === "object" ? str(raw.id) || str(raw.name) : str(raw)).trim();
@@ -248,6 +302,7 @@
     findPins,
     slimPin,
     slimDetail,
+    toCsv,
   };
 
   root.PinRankExtract = api;

@@ -23,7 +23,7 @@
   window.__pinRankContent = true;
 
   /** Bump with manifest.json; the hover panel prints it so a reload is provable. */
-  const VERSION = "0.1.5";
+  const VERSION = "0.2.0";
 
   const DETAIL_TTL_MS = 10 * 60 * 1000;
   const ERROR_TTL_MS = 60 * 1000;
@@ -42,6 +42,9 @@
   const badgeById = new Map();
   /** ids whose counts came from PinResource, so they must not be refetched */
   const authoritative = new Set();
+  /** id -> saved snapshot; mirrored into chrome.storage.local for the popup */
+  const saved = {};
+  const SAVED_KEY = "pinrank:saved";
 
   const fetchQueue = [];
   let inflight = 0;
@@ -204,6 +207,8 @@
           } else {
             emptyStats = 0;
           }
+
+          enrichSaved(id);
         }
 
         if (panelId === id) renderPanel(id);
@@ -243,6 +248,133 @@
       alt: "",
       promoted: false,
     };
+  }
+
+  /* ------------------------------------------------------------------ saved */
+
+  /**
+   * Saving is local and snapshot-based: everything the overlay knows about a pin
+   * is copied at the moment you click, so later edits on Pinterest cannot change
+   * a list you already collected (or exported).
+   */
+  function storageArea() {
+    const api = globalThis.chrome;
+    return (api && api.storage && api.storage.local) || null;
+  }
+
+  function replaceSaved(next) {
+    for (const id of Object.keys(saved)) delete saved[id];
+    Object.assign(saved, next || {});
+  }
+
+  function recordFor(id) {
+    const info = pins.get(id) || blankPin(id);
+    const detail = details.get(id);
+    const data = detail && detail.status === "ok" ? detail.data : {};
+
+    return {
+      ...info,
+      seoTitle: data.seoTitle || "",
+      category: data.category || "",
+      interestTags: data.interestTags || [],
+      savedAt: new Date().toISOString(),
+      query: currentQuery(),
+      sourceUrl: location.href,
+    };
+  }
+
+  function toggleSaved(id) {
+    if (!id) return;
+
+    if (saved[id]) delete saved[id];
+    else saved[id] = recordFor(id);
+
+    const area = storageArea();
+    if (area) area.set({ [SAVED_KEY]: saved });
+
+    if (panelId === id) renderPanel(id);
+    queueScan();
+  }
+
+  function loadSaved() {
+    const area = storageArea();
+    if (!area) return;
+
+    area.get(SAVED_KEY, (result) => {
+      replaceSaved(result && result[SAVED_KEY]);
+      if (panelId) renderPanel(panelId);
+      queueScan();
+    });
+  }
+
+  /**
+   * A pin can be saved the instant the panel appears, before its detail request
+   * lands. Fill the blanks once it does, so the CSV carries the SEO fields too —
+   * but never overwrite a value the snapshot already captured.
+   */
+  function enrichSaved(id) {
+    const record = saved[id];
+    const info = pins.get(id);
+    if (!record || !info) return;
+
+    const detail = details.get(id);
+    const data = detail && detail.status === "ok" ? detail.data : {};
+    const candidates = {
+      saves: info.saves,
+      comments: data.comments != null ? data.comments : info.comments,
+      repins: info.repins,
+      title: info.title,
+      description: info.description,
+      link: info.link,
+      domain: info.domain,
+      pinner: info.pinner,
+      pinnerName: info.pinnerName,
+      followers: info.followers,
+      board: info.board,
+      boardPins: info.boardPins,
+      createdAt: info.createdAt,
+      width: info.width,
+      height: info.height,
+      richType: info.richType,
+      richSite: info.richSite,
+      topics: info.topics,
+      hashtags: info.hashtags,
+      alt: info.alt,
+      seoTitle: data.seoTitle,
+      category: data.category,
+      interestTags: data.interestTags,
+    };
+
+    let changed = false;
+    for (const [key, value] of Object.entries(candidates)) {
+      const current = record[key];
+      const blank = current == null || current === "" || (Array.isArray(current) && current.length === 0);
+      const known = value != null && value !== "" && !(Array.isArray(value) && value.length === 0);
+
+      if (blank && known) {
+        record[key] = value;
+        changed = true;
+      }
+    }
+
+    if (!changed) return;
+
+    const area = storageArea();
+    if (area) area.set({ [SAVED_KEY]: saved });
+    if (panelId === id) renderPanel(id);
+  }
+
+  /** Keep panels in other tabs in step with a save made here. */
+  function watchSaved() {
+    const api = globalThis.chrome;
+    if (!api || !api.storage || !api.storage.onChanged) return;
+
+    api.storage.onChanged.addListener((changes, namespace) => {
+      if (namespace !== "local" || !changes[SAVED_KEY]) return;
+      replaceSaved(changes[SAVED_KEY].newValue);
+      if (panelId) renderPanel(panelId);
+      queueScan();
+    });
   }
 
   /**
@@ -307,6 +439,7 @@
     if (comments != null) parts.push(comments.toLocaleString() + " comments");
     const created = X.isoDate(info.createdAt);
     if (created) parts.push("created " + created);
+    if (saved[info.id]) parts.push("saved to PinRank");
     if (info.id) parts.push("pin " + info.id);
     return parts.join(" · ");
   }
@@ -347,7 +480,7 @@
 
     // Scans run on every page mutation plus a 2s sweep; only touch the DOM when
     // the numbers actually changed.
-    const signature = [info.position, info.saves, comments, age].join("|");
+    const signature = [info.position, info.saves, comments, age, saved[info.id] ? "1" : "0"].join("|");
     if (badge.dataset.sig === signature) return badge;
     badge.dataset.sig = signature;
 
@@ -369,6 +502,9 @@
     }
 
     if (age) badge.appendChild(el("span", "pinrank-age", age));
+
+    // A saved pin stays marked after the pointer leaves, so the list is visible.
+    if (saved[info.id]) badge.appendChild(el("span", "pinrank-mark", "✓ saved"));
 
     badge.title = badgeTitle(info, comments);
 
@@ -464,6 +600,25 @@
       panel = el("div", "pinrank-panel");
       panel.setAttribute("data-pinrank", "1");
       (document.body || document.documentElement).appendChild(panel);
+
+      // Event delegation: the panel body is rebuilt on every render, so the
+      // listener lives on the panel itself.
+      panel.addEventListener("click", (event) => {
+        const button =
+          event.target && event.target.closest && event.target.closest("[data-pinrank-save]");
+        if (!button) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        if (panelId) toggleSaved(panelId);
+      });
+
+      // The pointer has to travel from the card onto the panel to reach the save
+      // button, so the panel keeps itself open while it is hovered.
+      panel.addEventListener("mouseenter", () => clearTimeout(hideTimer));
+      panel.addEventListener("mouseleave", () => {
+        hideTimer = setTimeout(closePanel, 220);
+      });
     }
     return panel;
   }
@@ -554,6 +709,13 @@
       panel.appendChild(el("div", "pinrank-note", "Log in to Pinterest to see saves and comments."));
     }
 
+    const isSaved = Boolean(saved[id]);
+    const action = el("button", "pinrank-act" + (isSaved ? " is-saved" : ""), isSaved ? "Saved — remove" : "Save pin");
+    action.type = "button";
+    action.setAttribute("data-pinrank-save", "1");
+    action.title = isSaved ? "Remove this pin from the CSV list" : "Add this pin to the CSV list";
+    panel.appendChild(action);
+
     panel.appendChild(el("div", "pinrank-foot", "PinRank " + VERSION));
   }
 
@@ -580,6 +742,9 @@
   }
 
   function openPanel(anchor, info) {
+    // A panel that is being opened wins over a close scheduled while the pointer
+    // crossed from one card to the next.
+    clearTimeout(hideTimer);
     panelId = info.id;
     ensurePanel();
     renderPanel(info.id);
@@ -646,12 +811,21 @@
 
       clearTimeout(hoverTimer);
       currentAnchor = null;
-      hideTimer = setTimeout(closePanel, 180);
+      // Long enough to cross the gap onto the panel; its mouseenter cancels this.
+      hideTimer = setTimeout(closePanel, 300);
     },
     true
   );
 
-  window.addEventListener("scroll", closePanel, { capture: true, passive: true });
+  window.addEventListener(
+    "scroll",
+    (event) => {
+      // Scrolling inside a tall panel must not dismiss the panel you are using.
+      if (panel && event.target && panel.contains(event.target)) return;
+      closePanel();
+    },
+    { capture: true, passive: true }
+  );
 
   /* ------------------------------------------------------------- data intake */
 
@@ -838,6 +1012,9 @@
   /* ------------------------------------------------------------------ start */
 
   console.info("[PinRank] overlay " + VERSION);
+
+  loadSaved();
+  watchSaved();
 
   // Search ranks should arrive before we start spending requests on stats.
   readyAt = Date.now() + (currentQuery() ? 900 : 0);
