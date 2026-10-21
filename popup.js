@@ -8,6 +8,7 @@
   const clearButton = document.getElementById("clear");
 
   let records = {};
+  let confirmTimer = 0;
 
   function render() {
     const total = Object.keys(records).length;
@@ -15,6 +16,7 @@
     count.textContent = total === 1 ? "1 pin saved" : total + " pins saved";
     exportButton.disabled = total === 0;
     clearButton.disabled = total === 0;
+    if (!confirmTimer) clearButton.textContent = "Clear";
   }
 
   function read() {
@@ -47,10 +49,20 @@
   clearButton.addEventListener("click", () => {
     const total = Object.keys(records).length;
     if (!total) return;
-    if (!confirm("Remove all " + total + " saved pins? Export the CSV first if you want a copy.")) {
+
+    // No window.confirm(): a dialog can close the popup before it returns.
+    if (!confirmTimer) {
+      clearButton.textContent = "Click again to clear";
+      confirmTimer = setTimeout(() => {
+        confirmTimer = 0;
+        clearButton.textContent = "Clear";
+      }, 4000);
       return;
     }
 
+    clearTimeout(confirmTimer);
+    confirmTimer = 0;
+    clearButton.textContent = "Clear";
     chrome.storage.local.remove(KEY, read);
   });
 
