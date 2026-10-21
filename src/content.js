@@ -23,7 +23,7 @@
   window.__pinRankContent = true;
 
   /** Bump with manifest.json; the hover panel prints it so a reload is provable. */
-  const VERSION = "0.2.1";
+  const VERSION = "0.2.2";
 
   const DETAIL_TTL_MS = 10 * 60 * 1000;
   const ERROR_TTL_MS = 60 * 1000;
@@ -649,6 +649,14 @@
     stats.appendChild(stat("repins", data ? fmt(data.repins) : "…", "repins"));
     panel.appendChild(stats);
 
+    // Above the long detail list so it stays reachable when the panel scrolls.
+    const isSaved = Boolean(saved[id]);
+    const action = el("button", "pinrank-act" + (isSaved ? " is-saved" : ""), isSaved ? "Saved — remove" : "Save pin");
+    action.type = "button";
+    action.setAttribute("data-pinrank-save", "1");
+    action.title = isSaved ? "Remove this pin from the CSV list" : "Add this pin to the CSV list";
+    panel.appendChild(action);
+
     const list = el("dl", "pinrank-rows");
     const row = (key, value) => {
       if (value == null || value === "" || value === "—") return;
@@ -708,13 +716,6 @@
     } else if (detail && detail.status === "ok" && info && info.saves == null) {
       panel.appendChild(el("div", "pinrank-note", "Log in to Pinterest to see saves and comments."));
     }
-
-    const isSaved = Boolean(saved[id]);
-    const action = el("button", "pinrank-act" + (isSaved ? " is-saved" : ""), isSaved ? "Saved — remove" : "Save pin");
-    action.type = "button";
-    action.setAttribute("data-pinrank-save", "1");
-    action.title = isSaved ? "Remove this pin from the CSV list" : "Add this pin to the CSV list";
-    panel.appendChild(action);
 
     panel.appendChild(el("div", "pinrank-foot", "PinRank " + VERSION));
   }
